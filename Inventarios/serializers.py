@@ -53,3 +53,24 @@ class ConceptosSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.conceptos
         fields = '__all__'
+
+# Ejemplo de validación en tu serializers.py utilizando IDs
+def validate(self, data):
+    concepto = data.get('concepto')
+    tipo = data.get('tipo_movimiento')
+    
+    # Nos aseguramos de que el concepto no sea None antes de evaluar su ID
+    if concepto:
+        # Supongamos que en tu BD el ID de 'Compra' es 1
+        if tipo == 'ENTRADA' and concepto.id == 1 and not data.get('proveedor'):
+            raise serializers.ValidationError({
+                "proveedor": "Las entradas por compra requieren asignar un proveedor."
+            })
+            
+        # Supongamos que en tu BD el ID de 'Venta' es 4
+        if tipo == 'SALIDA' and concepto.id == 4 and not data.get('cliente'):
+            raise serializers.ValidationError({
+                "cliente": "Las salidas por venta requieren asignar un cliente."
+            })
+            
+    return data

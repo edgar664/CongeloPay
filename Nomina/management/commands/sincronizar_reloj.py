@@ -18,8 +18,9 @@ class Command(BaseCommand):
         RELOJ_IP = '192.168.0.110' 
         PUERTO = 4370
         
-        # Forzamos UDP puro desde el inicio que es el único que no da "packet invalid"
-        zk = ZK(RELOJ_IP, port=PUERTO, timeout=20, password=0, force_udp=True, ommit_ping=True)
+        # MEJORA 1: Bajamos el timeout a 7 segundos estrictos.
+        # Quitamos ommit_ping=True para forzar un ping de red rápido antes de comprometer los sockets UDP.
+        zk = ZK(RELOJ_IP, port=PUERTO, timeout=7, password=0, force_udp=True, ommit_ping=False)
         conn = None
         asistencias_raw = []
         
@@ -28,34 +29,39 @@ class Command(BaseCommand):
         try:
             conn = zk.connect()
             
-            # ---> TRUCO PARA MODELOS ECONÓMICOS DE NGTECO <---
-            # Forzamos los parámetros de buffer pequeños antes de pedir datos
-            # Esto evita que el chip interno del reloj se congele y provoque el timeout
+            # TRUCO NGTeco: Forzamos parámetros legacy
             conn.is_modern_firmware = False  
             
             self.stdout.write(self.style.SUCCESS("Extrayendo registros de la memoria..."))
             asistencias_raw = conn.get_attendance()
             
         except Exception as e:
-            # Si falla el método estándar, usamos el método alternativo de lectura por bloques
             self.stdout.write(self.style.WARNING(f"Intento 1 falló ({e}). Aplicando lectura alterna de registros..."))
-            try:
-                if conn:
-                    # Forzamos la inicialización del conteo de usuarios para despertar el chip de memoria
-                    conn.get_users() 
+            
+            # MEJORA 2: Solo intentamos la lectura alterna SI logramos obtener una conexión inicial.
+            # Si el error del Intento 1 fue que el reloj no existe en la red, conn es None y get_users() tirará un Crash feo.
+            if conn is not None:
+                try:
+                    conn.get_users() # Despierta el chip de memoria
                     asistencias_raw = conn.get_attendance()
-            except Exception as e2:
-                raise Exception(f"El hardware del reloj rechazó la extracción de datos: {e2}")
+                except Exception as e2:
+                    self.stdout.write(self.style.ERROR(f"Lectura alterna también falló: {e2}"))
+            else:
+                self.stdout.write(self.style.ERROR("No se pudo intentar la lectura alterna porque el socket principal nunca conectó."))
+                
         finally:
             if conn:
                 try:
+                    # MEJORA 3: Forzar el cierre inmediato de buffers nativos de la librería pyzk
+                    conn.enable_device() # Se asegura de dejar el reloj operativo para los empleados
                     conn.disconnect()
                 except:
                     pass
-                self.stdout.write(self.style.SUCCESS("Socket del reloj liberado."))
+                self.stdout.write(self.style.SUCCESS("Socket del reloj liberado de forma segura."))
 
+        # Si no hay registros recuperados, salimos rápido antes de iterar la base de datos
         if not asistencias_raw:
-            self.stdout.write(self.style.WARNING("El búfer de memoria devuelto está vacío."))
+            self.stdout.write(self.style.WARNING("El búfer de memoria devuelto está vacío o el dispositivo no respondió."))
             return
 
         try:

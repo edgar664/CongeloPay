@@ -17,13 +17,24 @@ class embace(models.Model):
 
     def __str__(self):
         return self.nombre
+    
+class tarima(models.Model):
+    nombre = models.CharField(max_length=100)
+    peso = models.DecimalField(max_digits=10, decimal_places=2)
 
+    def __str__(self):
+        return self.nombre
+    
 class almacen(models.Model):
     nombre = models.CharField(max_length=100)
     descripcion = models.TextField(blank=True, null=True)
     
     def __str__(self):
         return self.nombre
+    
+class categoria(models.Model):
+    nombre = models.CharField(max_length=100)
+    descripcion = models.TextField(blank=True, null=True)
     
 class producto(models.Model):
     nombre = models.CharField(max_length=100)
