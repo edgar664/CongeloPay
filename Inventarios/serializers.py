@@ -18,7 +18,7 @@ class ProductoLookupSerializer(serializers.ModelSerializer):
 class AlmacenLookupSerializer(serializers.ModelSerializer):
     class Meta:
         model = almacen
-        fields = ['id', 'nombre']
+        fields = ['id', 'nombre', 'descripcion']
 
 class ConceptoLookupSerializer(serializers.ModelSerializer):
     class Meta:
@@ -60,6 +60,7 @@ class MovimientoSerializer(serializers.ModelSerializer):
     nombre_producto = serializers.ReadOnlyField(source='producto.nombre')
     nombre_concepto = serializers.ReadOnlyField(source='concepto.nombre')
     nombre_embace = serializers.ReadOnlyField(source='embace.nombre')
+
     
     # Campos que el frontend enviará explícitamente para las Relaciones Genéricas
     origen_modelo = serializers.SerializerMethodField()
@@ -73,7 +74,7 @@ class MovimientoSerializer(serializers.ModelSerializer):
             'id', 'producto', 'nombre_producto', 'concepto', 'nombre_concepto', 'lote', 'unidades', 
             'kilos_brutos', 'kilos_netos', 'embace', 'nombre_embace', 'tarima', 
             'observaciones', 'origen_modelo', 'origen_id', 'nombre_origen',
-            'destino_modelo', 'destino_id', 'nombre_destino'
+            'destino_modelo', 'destino_id', 'nombre_destino', 'fecha', 'hora'
         ]
         # Hacemos kilos_netos de solo lectura porque el backend lo va a calcular solo
         read_only_fields = ['kilos_netos']
@@ -220,11 +221,4 @@ class StockActualSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = StockActual
-        fields = [
-            'id', 
-            'producto', 'nombre_producto',  # 'producto' da el ID, 'nombre_producto' da el texto
-            'almacen', 'nombre_almacen', 
-            'lote', 
-            'unidades', 
-            'kilos_netos'
-        ]
+        fields = ['id', 'producto', 'nombre_producto', 'almacen', 'nombre_almacen', 'lote', 'kilos_netos', 'unidades']

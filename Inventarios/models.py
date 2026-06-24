@@ -107,6 +107,9 @@ class Movimiento(models.Model):
     destino_content_type = models.ForeignKey(ContentType, on_delete=models.PROTECT, related_name='movimientos_destino')
     destino_id = models.PositiveIntegerField()
     destino = GenericForeignKey('destino_content_type', 'destino_id')
+    # Puede ser nulo porque las "Compras" no tienen un lote previo.
+    lote_origen = models.CharField(max_length=50, blank=True, null=True, help_text="Lote del cual proviene (ej: Materia Prima)")
 
     def __str__(self):
         return f"Mov {self.id}: {self.concepto.nombre} - {self.producto.nombre}"
+    

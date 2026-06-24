@@ -6,4 +6,4 @@ class InventariosConfig(AppConfig):
     name = 'Inventarios'
     
     def ready(self):
-        import Inventarios.models  # Importa los signals al iniciar la app
+        import Inventarios.signals  # Importa los signals al iniciar la app
