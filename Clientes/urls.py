@@ -4,8 +4,7 @@ from . import views
 
 router = routers.DefaultRouter()
 router.register(r'clientes', views.ClienteViewSet, basename='clientes')
-router.register(r'facturas', views.FacturaClienteViewSet, basename='facturas')
-router.register(r'pagos', views.PagoClienteViewSet, basename='pagos')
+
 
 
 urlpatterns = [

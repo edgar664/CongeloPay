@@ -124,7 +124,7 @@ WSGI_APPLICATION = 'Nominas.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'SNZ',
+        'NAME': 'SNZP',
         'USER': 'root',
         'PASSWORD':'Bared664',
         'PORT':'3306',

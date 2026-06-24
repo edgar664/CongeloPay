@@ -1,8 +1,8 @@
 from django.shortcuts import render
 from rest_framework import viewsets
 from rest_framework.permissions import AllowAny
-from .models import Proveedor, factura, pago
-from .serializers import ProveedorSerializer, FacturaSerializer, PagoSerializer
+from .models import Proveedor
+from .serializers import ProveedorSerializer
 
 # Create your views here.
 class ProveedorViewSet(viewsets.ModelViewSet):
@@ -10,12 +10,3 @@ class ProveedorViewSet(viewsets.ModelViewSet):
     serializer_class = ProveedorSerializer
     permission_classes = [AllowAny]
 
-class FacturaViewSet(viewsets.ModelViewSet):
-    queryset = factura.objects.all()  # Reemplaza con el modelo Factura real
-    serializer_class = FacturaSerializer  # Reemplaza con el serializer Factura real
-    permission_classes = [AllowAny]
-
-class PagoViewSet(viewsets.ModelViewSet):
-    queryset = pago.objects.all()  # Reemplaza con el modelo Pago real
-    serializer_class = PagoSerializer  # Reemplaza con el serializer Pago real
-    permission_classes = [AllowAny]
