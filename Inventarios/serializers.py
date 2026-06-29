@@ -28,12 +28,12 @@ class ConceptoLookupSerializer(serializers.ModelSerializer):
 class EmbaceLookupSerializer(serializers.ModelSerializer):
     class Meta:
         model = embace
-        fields = ['id', 'nombre']
+        fields = ['id', 'nombre', 'peso']
 
 class TarimaLookupSerializer(serializers.ModelSerializer):
     class Meta:
         model = tarima
-        fields = ['id', 'nombre']
+        fields = ['id', 'nombre', 'peso']
 
 class ProveedorLookupSerializer(serializers.ModelSerializer):
     # Usamos un campo calculado por si tu modelo usa 'razon_social' o 'nombre'
@@ -221,4 +221,4 @@ class StockActualSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = StockActual
-        fields = ['id', 'producto', 'nombre_producto', 'almacen', 'nombre_almacen', 'lote', 'kilos_netos', 'unidades']
+        fields = ['id', 'producto', 'nombre','nombre_producto', 'almacen', 'nombre_almacen', 'lote', 'kilos_netos', 'unidades']

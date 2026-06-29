@@ -10,6 +10,7 @@ from rest_framework.permissions import AllowAny # O IsAuthenticated si usas toke
 from .models import producto, almacen, Concepto, embace, tarima
 from Proveedores.models import Proveedor
 from Clientes.models import Cliente 
+from rest_framework.generics import ListCreateAPIView # <--- Cambia a esta
 
 from .serializers import (
     ProductoLookupSerializer, AlmacenLookupSerializer, ConceptoLookupSerializer,
@@ -31,7 +32,7 @@ class ConceptoViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ConceptoLookupSerializer
     permission_classes = [AllowAny]
 
-class EmbaceViewSet(viewsets.ReadOnlyModelViewSet):
+class EmbaceViewSet(viewsets.ModelViewSet):
     queryset = embace.objects.all()
     serializer_class = EmbaceLookupSerializer
     permission_classes = [AllowAny]
