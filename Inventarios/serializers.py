@@ -56,37 +56,33 @@ class ClienteLookupSerializer(serializers.ModelSerializer):
     def get_nombre(self, obj):
         return getattr(obj, 'nombre', getattr(obj, 'razon_social', f"Cliente #{obj.id}"))
 class MovimientoSerializer(serializers.ModelSerializer):
-    # En tu Inventarios/serializers.py dentro de MovimientoSerializer:
     nombre_producto = serializers.ReadOnlyField(source='producto.nombre')
     nombre_concepto = serializers.ReadOnlyField(source='concepto.nombre')
     nombre_embace = serializers.ReadOnlyField(source='embace.nombre')
 
-    
-    # Campos que el frontend enviará explícitamente para las Relaciones Genéricas
     origen_modelo = serializers.SerializerMethodField()
     destino_modelo = serializers.SerializerMethodField()
     nombre_origen = serializers.SerializerMethodField()
     nombre_destino = serializers.SerializerMethodField()
 
+    materia_prima_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
+
     class Meta:
         model = Movimiento
         fields = [
-            'id', 'producto', 'nombre_producto', 'concepto', 'nombre_concepto', 'lote', 'unidades', 
+            'id', 'producto', 'nombre_producto', 'concepto', 'nombre_concepto', 
+            'lote', 'lote_origen', 'unidades', 
             'kilos_brutos', 'kilos_netos', 'embace', 'nombre_embace', 'tarima', 
             'observaciones', 'origen_modelo', 'origen_id', 'nombre_origen',
-            'destino_modelo', 'destino_id', 'nombre_destino', 'fecha', 'hora'
+            'destino_modelo', 'destino_id', 'nombre_destino', 'fecha', 'hora',
+            'materia_prima_id' 
         ]
-        # Hacemos kilos_netos de solo lectura porque el backend lo va a calcular solo
         read_only_fields = ['kilos_netos']
 
-   # Corrige estos métodos dentro de tu MovimientoSerializer:
-
     def get_origen_modelo(self, obj):
-        # Cambiado de origen_type a origen_content_type 👈
         return obj.origen_content_type.model if obj.origen_content_type else None
 
     def get_destino_modelo(self, obj):
-        # Cambiado de destino_type a destino_content_type 👈
         return obj.destino_content_type.model if obj.destino_content_type else None
 
     def get_nombre_origen(self, obj):
@@ -96,9 +92,6 @@ class MovimientoSerializer(serializers.ModelSerializer):
         return str(obj.destino) if obj.destino else "Desconocido"
 
     def validate(self, data):
-        """
-        Paso 1: Calcular los kilos netos reales descontando tara
-        """
         unidades = data.get('unidades', 0)
         kilos_brutos = data.get('kilos_brutos', 0)
         id_envase = data.get('embace')
@@ -114,32 +107,26 @@ class MovimientoSerializer(serializers.ModelSerializer):
         if data['kilos_netos'] < 0:
             raise serializers.ValidationError({"kilos_brutos": "Los kilos netos calculados no pueden ser menores a cero. Revisa los pesos."})
 
-        """
-        Paso 2: Validar si el Origen tiene stock suficiente (Buscando en los datos crudos del contexto)
-        """
-        # 💡 LEER DIRECTAMENTE DESDE EL JSON CRUDO (initial_data) PORQUE ES UN POST
-        initial_data = getattr(self, 'initial_data', {})
-        origen_modelo_name = initial_data.get('origen_modelo', '').lower()
+        initial_data = getattr(self, 'initial_data', {}) or {}
+        origen_modelo_raw = initial_data.get('origen_modelo') or ''
+        origen_modelo_name = origen_modelo_raw.lower() if isinstance(origen_modelo_raw, str) else ''
         origen_id = initial_data.get('origen_id')
         
         if origen_modelo_name == 'almacen':
             if not origen_id:
                 raise serializers.ValidationError({"origen_id": "El ID del almacén de origen es requerido."})
 
-            # Buscamos si hay existencias
             stock = StockActual.objects.filter(
                 producto=data['producto'],
                 almacen_id=origen_id,
                 lote=data['lote']
             ).first()
 
-            # 🚨 Si ni siquiera existe el registro en la tabla, el stock operativo es 0
             if not stock:
                 raise serializers.ValidationError({
                     "inventario": f"No existe registro de inventario para el lote {data['lote']} en el almacén especificado (Disponible: 0 unds / 0 kg)."
                 })
 
-            # Si existe pero es insuficiente
             if stock.kilos_netos < data['kilos_netos'] or stock.unidades < unidades:
                 raise serializers.ValidationError({
                     "inventario": f"Inventario insuficiente en el almacén de origen para el lote {data['lote']}. "
@@ -150,30 +137,32 @@ class MovimientoSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        """
-        Paso 3: Guardar el movimiento y actualizar la tabla StockActual de manera atómica
-        """
-        # 💡 Extraemos los valores usando initial_data de forma segura para las relaciones genéricas
-        initial_data = getattr(self, 'initial_data', {})
-        origen_modelo = initial_data.get('origen_modelo', 'almacen').lower()
+        initial_data = getattr(self, 'initial_data', {}) or {}
+        
+        origen_modelo_raw = initial_data.get('origen_modelo') or ''
+        destino_modelo_raw = initial_data.get('destino_modelo') or ''
+        
+        origen_modelo = origen_modelo_raw.lower() if isinstance(origen_modelo_raw, str) else ''
+        destino_modelo = destino_modelo_raw.lower() if isinstance(destino_modelo_raw, str) else ''
+        
         origen_id = initial_data.get('origen_id', None)
-        destino_modelo = initial_data.get('destino_modelo', 'almacen').lower()
         destino_id = initial_data.get('destino_id', None)
 
-        # Limpiamos los SerializerMethodFields de los datos validados si es que se colaron
+        materia_prima_id = validated_data.pop('materia_prima_id', None) 
+        lote_origen_str = validated_data.get('lote_origen', None)      
+
         validated_data.pop('origen_modelo', None)
         validated_data.pop('origen_id', None)
         validated_data.pop('destino_modelo', None)
         validated_data.pop('destino_id', None)
 
         try:
-            origen_ct = ContentType.objects.get(model=origen_modelo)
-            destino_ct = ContentType.objects.get(model=destino_modelo)
+            origen_ct = ContentType.objects.get(model=origen_modelo) if origen_modelo else None
+            destino_ct = ContentType.objects.get(model=destino_modelo) if destino_modelo else None
         except ContentType.DoesNotExist:
             raise serializers.ValidationError({"error": "El modelo de origen o destino especificado no es válido."})
 
         with transaction.atomic():
-            # Crear el registro del movimiento histórico
             movimiento = Movimiento.objects.create(
                 origen_content_type=origen_ct,
                 origen_id=origen_id,
@@ -188,21 +177,32 @@ class MovimientoSerializer(serializers.ModelSerializer):
             kilos_netos_mov = validated_data['kilos_netos']
 
             # A. Si el origen es un ALMACÉN, RESTAMOS de su stock actual
-            if origen_modelo == 'almacen':
-                # Cambiamos .get() por .filter().first() para manejarlo de forma segura ante cualquier inconsistencia
+            if origen_modelo == 'almacen' and origen_id:
+                producto_a_descontar_id = materia_prima_id if materia_prima_id else producto_obj.id
+                lote_a_descontar = lote_origen_str if lote_origen_str else lote_str
+
                 stock_origen = StockActual.objects.filter(
-                    producto=producto_obj,
+                    producto_id=producto_a_descontar_id,
                     almacen_id=origen_id,
-                    lote=lote_str
+                    lote=lote_a_descontar
                 ).first()
                 
                 if stock_origen:
                     stock_origen.unidades -= unidades_mov
                     stock_origen.kilos_netos -= kilos_netos_mov
-                    stock_origen.save()
+                    
+                    # 💡 SOLUCIÓN: Si tras el traspaso el stock queda vacío, eliminamos el registro
+                    if stock_origen.unidades <= 0 or stock_origen.kilos_netos <= 0:
+                        stock_origen.delete()
+                    else:
+                        stock_origen.save()
+                else:
+                    raise serializers.ValidationError({
+                        "inventario": f"No hay inventario para la Materia Prima con lote '{lote_a_descontar}' en el almacén de origen asignado."
+                    })
 
             # B. Si el destino es un ALMACÉN, SUMAMOS a su stock actual
-            if destino_modelo == 'almacen':
+            if destino_modelo == 'almacen' and destino_id:
                 stock_destino, created = StockActual.objects.get_or_create(
                     producto=producto_obj,
                     almacen_id=destino_id,
@@ -210,10 +210,11 @@ class MovimientoSerializer(serializers.ModelSerializer):
                     defaults={'unidades': 0, 'kilos_netos': 0.00}
                 )
                 stock_destino.unidades += unidades_mov
+                
                 stock_destino.kilos_netos = float(Decimal(str(stock_destino.kilos_netos)) + Decimal(str(kilos_netos_mov)))
                 stock_destino.save()
 
-            return movimiento    
+            return movimiento
 class StockActualSerializer(serializers.ModelSerializer):
     # 👈 Traemos los nombres de los modelos relacionados
     nombre_producto = serializers.ReadOnlyField(source='producto.nombre')

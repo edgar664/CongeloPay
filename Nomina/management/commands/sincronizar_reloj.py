@@ -15,7 +15,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         fecha_str = options['fecha']
-        RELOJ_IP = '192.168.0.110' 
+        RELOJ_IP = '192.168.0.139' 
         PUERTO = 4370
         
         # MEJORA 1: Bajamos el timeout a 7 segundos estrictos.

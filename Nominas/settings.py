@@ -67,6 +67,8 @@ CORS_ALLOW_HEADERS = [
 # Application definition
 CORS_ALLOW_ALL_ORIGINS = True # Solo mientras pruebas la conexión
 CORS_ALLOW_CREDENTIALS = True
+# settings.py
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -74,6 +76,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    
+    # 🌟 AGREGA ESTA LÍNEA AQUÍ
+    'rest_framework', 
+    
+    # Tus aplicaciones locales
     'Nomina',
     'Empleados',
     'Usuarios',
@@ -81,11 +88,8 @@ INSTALLED_APPS = [
     'Proveedores',
     'Clientes',
     'Empresa',
-    'corsheaders', # Añadir esto
-
-
+    'corsheaders', 
 ]
-
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware', # <--- SIEMPRE DEBE SER EL PRIMERO
     'django.middleware.security.SecurityMiddleware',

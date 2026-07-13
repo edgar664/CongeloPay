@@ -96,16 +96,14 @@ class Movimiento(models.Model):
     usuario = models.ForeignKey('Usuarios.Usuario', on_delete=models.SET_NULL, null=True, blank=True)
     observaciones = models.TextField(blank=True, null=True)
 
-    # ─── RELACIÓN GENÉRICA PARA EL ORIGEN ───
-    # Puede apuntar a un Proveedor, a un Almacén o a un proceso interno
-    origen_content_type = models.ForeignKey(ContentType, on_delete=models.PROTECT, related_name='movimientos_origen')
-    origen_id = models.PositiveIntegerField()
+  # ─── RELACIÓN GENÉRICA PARA EL ORIGEN ───
+    origen_content_type = models.ForeignKey(ContentType, on_delete=models.PROTECT, related_name='movimientos_origen', null=True, blank=True)
+    origen_id = models.PositiveIntegerField(null=True, blank=True) # 🌟 Ahora permite nulos
     origen = GenericForeignKey('origen_content_type', 'origen_id')
 
     # ─── RELACIÓN GENÉRICA PARA EL DESTINO ───
-    # Puede apuntar a un Cliente, a un Almacén o a un proceso interno
-    destino_content_type = models.ForeignKey(ContentType, on_delete=models.PROTECT, related_name='movimientos_destino')
-    destino_id = models.PositiveIntegerField()
+    destino_content_type = models.ForeignKey(ContentType, on_delete=models.PROTECT, related_name='movimientos_destino', null=True, blank=True)
+    destino_id = models.PositiveIntegerField(null=True, blank=True) # 🌟 Ahora permite nulos
     destino = GenericForeignKey('destino_content_type', 'destino_id')
     # Puede ser nulo porque las "Compras" no tienen un lote previo.
     lote_origen = models.CharField(max_length=50, blank=True, null=True, help_text="Lote del cual proviene (ej: Materia Prima)")
