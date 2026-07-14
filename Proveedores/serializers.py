@@ -81,3 +81,9 @@ class FacturaProveedorSerializer(serializers.ModelSerializer):
                 factura.save()
             
             return factura
+    
+class PagoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Factura
+        fields = ['id', 'estatus', 'saldo_pendiente']
+        read_only_fields = ['id', 'estatus', 'saldo_pendiente']

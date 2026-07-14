@@ -101,3 +101,26 @@ def actualizar_totales_factura(sender, instance, action, **kwargs):
             
         # Guardamos los cambios usando save con update_fields para no disparar bucles infinitos
         instance.save(update_fields=['subtotal', 'iva', 'total', 'saldo_pendiente'])
+
+class pagos(models.Model):
+    factura = models.ForeignKey(Factura, on_delete=models.CASCADE, related_name='pagos')
+    fecha_pago = models.DateField(help_text="Fecha en que se realizó el pago")
+    monto = models.DecimalField(max_digits=12, decimal_places=2, help_text="Monto pagado")
+    metodo_pago = models.CharField(max_length=50, help_text="Método de pago utilizado (Transferencia, Cheque, Efectivo, etc.)")
+    referencia = models.CharField(max_length=100, blank=True, null=True, help_text="Número de referencia o folio del pago")
+
+    def __str__(self):
+        return f"Pago de {self.monto} el {self.fecha_pago} para Factura {self.factura.numero}"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Actualizar el saldo pendiente de la factura después de registrar un pago
+        self.factura.saldo_pendiente -= self.monto
+        if self.factura.saldo_pendiente <= 0:
+            self.factura.estatus = 'PAGADA'
+            self.factura.saldo_pendiente = Decimal('0.00')
+        elif self.factura.saldo_pendiente < self.factura.total:
+            self.factura.estatus = 'PARCIAL'
+        else:
+            self.factura.estatus = 'PENDIENTE'
+        self.factura.save(update_fields=['saldo_pendiente', 'estatus'])
